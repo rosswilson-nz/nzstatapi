@@ -1,16 +1,16 @@
-nzstat_get_codelists <- function(dataflow_id, dimension_ids) {
+nzstat_get_codelists <- function(dataflow_id, dimension_ids, max_tries = 10L) {
   base_url <- getOption(
     "NZSTAT_BASE_URL",
     "https://api.data.stats.govt.nz/rest/"
   )
   key <- Sys.getenv("NZSTAT_API_KEY")
 
-  codelists <- get_codelists(dataflow_id)
+  codelists <- get_codelists(dataflow_id, max_tries)
 
   codelists[codelists$dimension_id %in% dimension_ids, ]
 }
 
-get_codelists <- function(dataflow_id) {
+get_codelists <- function(dataflow_id, max_tries) {
   base_url <- getOption(
     "NZSTAT_BASE_URL",
     "https://api.data.stats.govt.nz/rest/"
@@ -44,12 +44,12 @@ get_codelists <- function(dataflow_id) {
 
   purrr::map(
     resp_list$Structure$Structures$Codelists,
-    \(codelist) extract_codes(codelist)
+    \(codelist) extract_codes(codelist, dataflow_id)
   ) |>
     purrr::list_rbind()
 }
 
-extract_codes <- function(codelist) {
+extract_codes <- function(codelist, dataflow_id) {
   name <- c(codelist[[1]])
   id <- gsub(paste0("(^CL_)|(_", dataflow_id, "$)"), "", attr(codelist, "id"))
   codelist <- codelist[-1]
