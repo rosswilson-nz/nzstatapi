@@ -2,7 +2,7 @@
 #'
 #' Retrieves, formats, and optionally filters all available dataflow definitions from
 
-nzstat_get_dataflows <- function(max_tries = 10L, search = NULL) {
+nzstat_get_dataflows <- function(search = NULL, max_tries = 10L) {
   base_url <- getOption(
     "NZSTAT_BASE_URL",
     "https://api.data.stats.govt.nz/rest/"
