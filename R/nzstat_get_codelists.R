@@ -1,22 +1,20 @@
-nzstat_get_codelists <- function(dataflow_id, dimension_ids, max_tries = 10L) {
-  base_url <- getOption(
-    "NZSTAT_BASE_URL",
-    "https://api.data.stats.govt.nz/rest/"
-  )
-  key <- Sys.getenv("NZSTAT_API_KEY")
+nzstat_get_codelists <- function(
+  dataflow_id,
+  dimension_ids,
+  max_tries = 10L,
+  base_url = get_base_url(),
+  api_key = get_api_key()
+) {
+  codelists <- get_codelists(dataflow_id, max_tries, base_url, api_key)
 
-  codelists <- get_codelists(dataflow_id, max_tries)
-
-  codelists[codelists$dimension_id %in% dimension_ids, ]
+  if (missing(dimension_ids)) {
+    codelists
+  } else {
+    codelists[codelists$dimension_id %in% dimension_ids, ]
+  }
 }
 
-get_codelists <- function(dataflow_id, max_tries) {
-  base_url <- getOption(
-    "NZSTAT_BASE_URL",
-    "https://api.data.stats.govt.nz/rest/"
-  )
-  key <- Sys.getenv("NZSTAT_API_KEY")
-
+get_codelists <- function(dataflow_id, max_tries, base_url, api_key) {
   dataflows <- nzstat_get_dataflows()
   dataflow <- dataflows[dataflows$DataflowID == dataflow_id, ]
   ref <- c(
@@ -28,11 +26,12 @@ get_codelists <- function(dataflow_id, max_tries) {
   )
 
   req <- httr2::request(base_url) |>
+    httr2::req_headers_redacted(
+      "Ocp-Apim-Subscription-Key" = api_key
+    ) |>
     httr2::req_headers(
-      "Ocp-Apim-Subscription-Key" = key,
       "Accept" = "application/xml",
-      "user-agent" = "nzstatapi/0.0.0.9000 (Language=R/4.51)",
-      "Cache-Control" = "no-cache"
+      "user-agent" = make_user_agent()
     ) |>
     httr2::req_url_path_append(ref) |>
     httr2::req_url_query(references = "codelist") |>

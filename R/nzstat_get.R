@@ -1,10 +1,10 @@
-nzstat_get <- function(dataflow_id, dimensions = list(), max_tries = 10L) {
-  base_url <- getOption(
-    "NZSTAT_BASE_URL",
-    "https://api.data.stats.govt.nz/rest"
-  )
-  api_key <- Sys.getenv("NZSTAT_API_KEY")
-
+nzstat_get <- function(
+  dataflow_id,
+  dimensions = list(),
+  max_tries = 10L,
+  base_url = get_base_url(),
+  api_key = get_api_key()
+) {
   dataflows <- nzstat_get_dataflows()
   dataflow <- dataflows[dataflows$DataflowID == dataflow_id, ]
   datastructure <- nzstat_get_datastructure(dataflow_id, max_tries = max_tries)
@@ -25,11 +25,12 @@ nzstat_get <- function(dataflow_id, dimensions = list(), max_tries = 10L) {
   }
 
   req <- httr2::request(base_url) |>
+    httr2::req_headers_redacted(
+      "Ocp-Apim-Subscription-Key" = api_key
+    ) |>
     httr2::req_headers(
-      "Ocp-Apim-Subscription-Key" = api_key,
       "Accept" = "application/xml",
-      "user-agent" = "nzstatapi/0.0.0.9000 (Language=R/4.51)",
-      "Cache-Control" = "no-cache"
+      "user-agent" = make_user_agent()
     ) |>
     httr2::req_url_path_append("data", flowref, key) |>
     httr2::req_url_query(format = "csvfilewithlabels") |>
