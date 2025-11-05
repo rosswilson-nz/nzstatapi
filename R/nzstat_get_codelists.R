@@ -38,7 +38,7 @@ nzstat_get_codelists <- function(
   if (!(missing(dimension_ids) || rlang::is_bare_character(dimension_ids))) {
     cli::cli_abort(c(
       "{.var dimension_ids} must be a character vector",
-      x = "You've supplied {.type {dataflow_id}}"
+      x = "You've supplied {.type {dimension_ids}}"
     ))
   }
   if (!rlang::is_bare_integerish(max_tries, 1)) {
