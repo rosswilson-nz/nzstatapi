@@ -75,18 +75,22 @@ get_dataflows <- function(max_tries, base_url, api_key) {
   # Perform request ----
   resp <- req |>
     httr2::req_perform() |>
-    httr2::resp_body_json()
+    httr2::resp_body_xml() |>
+    xml2::as_list()
 
   # Extract request data to tibble ----
-  tbl <- purrr::map(resp$references, extract_dataflow_catalogue) |>
+  tbl <- purrr::map(
+    resp$Structure$Structures$Dataflows,
+    extract_dataflow_catalogue
+  ) |>
     purrr::list_rbind()
 }
 
 extract_dataflow_catalogue <- function(dataflow) {
   tibble::tibble(
-    Name = dataflow$name,
-    DataflowID = dataflow$id,
-    AgencyID = dataflow$agencyID,
-    Version = dataflow$version
+    Name = dataflow$Name[[1]],
+    DataflowID = attr(dataflow, "id"),
+    AgencyID = attr(dataflow, "agencyID"),
+    Version = attr(dataflow, "version"),
   )
 }
