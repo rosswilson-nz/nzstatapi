@@ -55,8 +55,18 @@ nzstat_get <- function(
     ))
   }
   dataflow <- dataflows[dataflows$DataflowID == dataflow_id, ]
-  datastructure <- nzstat_get_datastructure(dataflow_id, max_tries = max_tries)
+  datastructure <- get_datastructures(dataflow, max_tries, base_url, api_key)
+  if (!all(names(dimensions) %in% datastructure$DimensionID)) {
+    wrong_ids <- names(dimensions)[
+      !(names(dimensions) %in% datastructure$DimensionID)
+    ]
+    cli::cli_abort(c(
+      "Unknown {.var dimensions} {.val {wrong_ids}}",
+      i = "Please check {.fn nzstat_get_datastructures} to confirm available dimensions"
+    ))
+  }
 
+  # Construct request ----
   flowref <- paste(
     dataflow$AgencyID,
     dataflow$DataflowID,
@@ -66,7 +76,7 @@ nzstat_get <- function(
   if (length(dimensions) == 0) {
     key <- "ALL"
   } else {
-    key <- purrr::map(datastructure$dimension_id, \(dim) {
+    key <- purrr::map(datastructure$DimensionID, \(dim) {
       paste(dimensions[[dim]] %||% "", collapse = "+")
     }) |>
       paste(collapse = ".")
@@ -84,6 +94,7 @@ nzstat_get <- function(
     httr2::req_url_query(format = "csvfilewithlabels") |>
     httr2::req_retry(max_tries)
 
+  # Perform request ----
   resp <- req |> httr2::req_perform()
 
   httr2::resp_body_string(resp) |>
