@@ -1,3 +1,28 @@
+#' Get data from an Aotearoa Data Explorer dataflow
+#'
+#' Retrieves data from an Aotearoa Data Explorer dataflow.
+#'
+#' @param dataflow_id String. The DataflowID of a dataflow in the API.
+#' @param dimensions Named list specifying codes to include for each dimension
+#'     of the dataset. Each element should be a character string listing the
+#'     codes to include for the correspondinbg dimension. All codes will be
+#'     included for omitted dimensions, so only those dimensions you wish to
+#'     subset need be listed.
+#' @param max_tries Integer; maximum retry attempts. Passed to
+#'     [httr2::req_retry()].
+#' @param base_url The base URL to the API. If not set, uses the
+#'     `getOption("NZSTAT_BASE_URL")`, or defaults to
+#'     `"https://api.data.stats.govt.nz/rest/"`
+#' @param api_key The API key to authenticate with the server. If not specified,
+#'     will look in environment variable `"NZSTAT_API_KEY"`, and throw an error
+#'     if that is not found.
+#'
+#' @returns A tibble, with columns `DimensionID`: the ID used to identify the
+#'     data dimension in requests; `CodeID`: the ID used to identify code values
+#'     for the corresponding dimension; and `Name`: the name/description of the
+#'     code.
+#'
+#' @export
 nzstat_get <- function(
   dataflow_id,
   dimensions = list(),
