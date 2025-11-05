@@ -60,7 +60,9 @@ nzstat_get_datastructure <- function(
   dataflow <- as.list(dataflows[dataflows$DataflowID == dataflow_id, ])
 
   # Perform request ----
-  get_datastructures(dataflow, max_tries, base_url, api_key)
+  tbl <- get_datastructures(dataflow, max_tries, base_url, api_key)
+
+  tbl[, c("DimensionID")]
 }
 
 get_datastructures <- function(dataflow, max_tries, base_url, api_key) {
@@ -98,12 +100,13 @@ get_datastructures <- function(dataflow, max_tries, base_url, api_key) {
   ) |>
     purrr::list_rbind()
 
-  dsd[order(dsd$position), ]
+  dsd[order(dsd$Position), ]
 }
 
 extract_datastructure_dimension <- function(dimension, dataflow_id) {
   tibble::tibble(
-    dimension_id = attr(dimension, "id"),
-    position = as.integer(attr(dimension, "position"))
+    DimensionID = attr(dimension, "id"),
+    CodelistID = attr(dimension$LocalRepresentation$Enumeration$Ref, "id"),
+    Position = as.integer(attr(dimension, "position"))
   )
 }
