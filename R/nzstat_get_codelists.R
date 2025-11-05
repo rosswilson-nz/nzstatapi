@@ -1,3 +1,26 @@
+#' Get codelists for dimensions of an Aotearoa Data Explorer dataflow
+#'
+#' Retrieves and formats codelists for one or more dimensions of an Aotearoa
+#'     Data Explorer dataflow.
+#'
+#' @param dataflow_id String. The DataflowID of a dataflow in the API.
+#' @param dimension_ids Character vector. Dimensions for which to retrieve
+#'     codelists.
+#' @param max_tries Integer; maximum retry attempts. Passed to
+#'     [httr2::req_retry()].
+#' @param base_url The base URL to the API. If not set, uses the
+#'     `getOption("NZSTAT_BASE_URL")`, or defaults to
+#'     `"https://api.data.stats.govt.nz/rest/"`
+#' @param api_key The API key to authenticate with the server. If not specified,
+#'     will look in environment variable `"NZSTAT_API_KEY"`, and throw an error
+#'     if that is not found.
+#'
+#' @returns A tibble, with columns `DimensionID`: the ID used to identify the
+#'     data dimension in requests; `CodeID`: the ID used to identify code values
+#'     for the corresponding dimension; and `Name`: the name/description of the
+#'     code.
+#'
+#' @export
 nzstat_get_codelists <- function(
   dataflow_id,
   dimension_ids,
