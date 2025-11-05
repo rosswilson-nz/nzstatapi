@@ -26,7 +26,7 @@ nzstat_get_datastructure <- function(
   # Validate inputs ----
   if (!rlang::is_string(dataflow_id)) {
     cli::cli_abort(c(
-      "{.var dataflow_id} must be {.type {NULL}} or a string",
+      "{.var dataflow_id} must be a string",
       x = "You've supplied {.type {dataflow_id}}"
     ))
   }
@@ -49,7 +49,7 @@ nzstat_get_datastructure <- function(
     ))
   }
 
-  # Get dataflows
+  # Get dataflows ----
   dataflows <- get_dataflows(max_tries, base_url, api_key)
   if (!(dataflow_id %in% dataflows$DataflowID)) {
     cli::cli_abort(c(
