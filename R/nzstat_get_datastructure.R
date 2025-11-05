@@ -3,7 +3,7 @@
 #' Retrieves and format the datastructure definition for an Aotearoa Data
 #'     Explorer dataflow.
 #'
-#' @dataflow_id String. The DataflowID of a dataflow in the API.
+#' @param dataflow_id String. The DataflowID of a dataflow in the API.
 #' @param max_tries Integer; maximum retry attempts. Passed to
 #'     [httr2::req_retry()].
 #' @param base_url The base URL to the API. If not set, uses the
