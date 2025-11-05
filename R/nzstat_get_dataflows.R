@@ -1,7 +1,22 @@
 #' Get dataflow definitions for all available Aotearoa Data Explorer datasets
 #'
-#' Retrieves, formats, and optionally filters all available dataflow definitions from
-
+#' Retrieves, formats, and optionally filters all available dataflow definitions
+#'     from the Aotearoa Data Explorer API.
+#'
+#' @param search Optional search string. A regex pattern passed to [grepl()].
+#' @param max_tries Integer; maximum retry attempts. Passed to
+#'     [httr2::req_retry()].
+#' @param base_url The base URL to the API. If not set, uses the
+#'     `getOption("NZSTAT_BASE_URL")`, or defaults to
+#'     `"https://api.data.stats.govt.nz/rest/"`
+#' @param api_key The API key to authenticate with the server. If not specified,
+#'     will look in environment variable `"NZSTAT_API_KEY"`, and throw an error
+#'     if that is not found.
+#'
+#' @returns A tibble, with columns `Name`: the name/description of the dataflow;
+#'     and `DataflowID`: the ID used to identify the dataflow in requests.
+#'
+#' @export
 nzstat_get_dataflows <- function(
   search = NULL,
   max_tries = 10L,
