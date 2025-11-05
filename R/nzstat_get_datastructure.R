@@ -1,3 +1,22 @@
+#' Get the datastructure definition for an Aotearoa Data Explorer dataflow
+#'
+#' Retrieves and format the datastructure definition for an Aotearoa Data
+#'     Explorer dataflow.
+#'
+#' @dataflow_id String. The DataflowID of a dataflow in the API.
+#' @param max_tries Integer; maximum retry attempts. Passed to
+#'     [httr2::req_retry()].
+#' @param base_url The base URL to the API. If not set, uses the
+#'     `getOption("NZSTAT_BASE_URL")`, or defaults to
+#'     `"https://api.data.stats.govt.nz/rest/"`
+#' @param api_key The API key to authenticate with the server. If not specified,
+#'     will look in environment variable `"NZSTAT_API_KEY"`, and throw an error
+#'     if that is not found.
+#'
+#' @returns A tibble, with column `DimensionID`: the ID used to identify the
+#'     data dimension in requests.
+#'
+#' @export
 nzstat_get_datastructure <- function(
   dataflow_id,
   max_tries = 10L,
