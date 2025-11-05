@@ -5,7 +5,55 @@ nzstat_get <- function(
   base_url = get_base_url(),
   api_key = get_api_key()
 ) {
-  dataflows <- nzstat_get_dataflows()
+  # Validate inputs ----
+  if (!rlang::is_string(dataflow_id)) {
+    cli::cli_abort(c(
+      "{.var dataflow_id} must be a string",
+      x = "You've supplied {.type {dataflow_id}}"
+    ))
+  }
+  if (!(rlang::is_bare_list(dimensions) && rlang::is_named(dimensions))) {
+    cli::cli_abort(c(
+      "{.var dimensions} must be a named list",
+      x = "You've supplied {.type {dimensions}}"
+    ))
+  }
+  if (!purrr::every(dimensions, rlang::is_bare_character)) {
+    wrong_dimensions <- which(
+      !purrr::map_lgl(dimensions, rlang::is_bare_character)
+    )
+    cli::cli_abort(c(
+      "Each element of {.var dimensions} must be a character vector",
+      x = "Element {.val {wrong_dimensions[[1]]}} is {.type {dimensions[[wrong_dimensions[[1]]]]}}"
+    ))
+  }
+  if (!rlang::is_bare_integerish(max_tries, 1)) {
+    cli::cli_abort(c(
+      "{.var max_tries} must be an integer",
+      x = "You've supplied {.type {max_tries}}"
+    ))
+  }
+  if (!rlang::is_string(base_url)) {
+    cli::cli_abort(c(
+      "{.var base_url} must be a string",
+      x = "You've supplied {.type {base_url}}"
+    ))
+  }
+  if (!rlang::is_string(api_key)) {
+    cli::cli_abort(c(
+      "{.var api_key} must be a string",
+      x = "You've supplied {.type {api_key}}"
+    ))
+  }
+
+  # Get dataflows and datastructure ----
+  dataflows <- get_dataflows(max_tries, base_url, api_key)
+  if (!(dataflow_id %in% dataflows$DataflowID)) {
+    cli::cli_abort(c(
+      "{.var dataflow_id}={.val {dataflow_id}} not found",
+      i = "Please check {.fn nzstat_get_dataflows} to select an available dataflow"
+    ))
+  }
   dataflow <- dataflows[dataflows$DataflowID == dataflow_id, ]
   datastructure <- nzstat_get_datastructure(dataflow_id, max_tries = max_tries)
 
