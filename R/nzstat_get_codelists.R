@@ -70,6 +70,13 @@ nzstat_get_codelists <- function(
   }
   dataflow <- as.list(dataflows[dataflows$DataflowID == dataflow_id, ])
   datastructure <- get_datastructures(dataflow, max_tries, base_url, api_key)
+  if (!all(dimension_ids %in% datastructure$DimensionID)) {
+    wrong_ids <- dimension_ids[!(dimension_ids %in% datastructure$DimensionID)]
+    cli::cli_abort(c(
+      "Unknown {.var dimension_ids} {.val {wrong_ids}}",
+      i = "Please check {.fn nzstat_get_datastructures} to confirm available dimensions"
+    ))
+  }
 
   # Perform request ----
   codelists <- get_codelists(dataflow_id, max_tries, base_url, api_key)
