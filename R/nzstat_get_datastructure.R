@@ -75,13 +75,13 @@ nzstat_get_datastructure <- function(
   }
   tbl <- the$datastructures[[dataflow_id]]
 
-  tbl[, c("DimensionID")]
+  tbl[, c("DimensionID", "Name")]
 }
 
 get_datastructures <- function(dataflow, max_tries, base_url, api_key) {
   # Construct request ----
   ref <- c(
-    "dataflow",
+    "datastructure",
     dataflow$AgencyID,
     dataflow$DataflowID,
     dataflow$Version,
@@ -97,7 +97,7 @@ get_datastructures <- function(dataflow, max_tries, base_url, api_key) {
       "user-agent" = make_user_agent()
     ) |>
     httr2::req_url_path_append(ref) |>
-    httr2::req_url_query(references = "datastructure")
+    httr2::req_url_query(references = "conceptscheme")
   if (max_tries > 1) {
     req <- req |> httr2::req_retry(max_tries)
   }
@@ -107,21 +107,36 @@ get_datastructures <- function(dataflow, max_tries, base_url, api_key) {
     httr2::resp_body_xml() |>
     xml2::as_list()
 
+  concepts <- resp$Structure$Structures$Concepts$ConceptScheme
+  concepts <- concepts[names(concepts) == "Concept"] |>
+    purrr::map(\(concept) extract_concept(concept)) |>
+    purrr::list_rbind()
+
   dsd <- purrr::map(
     resp$Structure$Structures$DataStructures[[
       1
     ]]$DataStructureComponents$DimensionList,
-    \(dimension) extract_datastructure_dimension(dimension, dataflow_id)
+    \(dimension) extract_datastructure_dimension(dimension, concepts)
   ) |>
     purrr::list_rbind()
 
   dsd[order(dsd$Position), ]
 }
 
-extract_datastructure_dimension <- function(dimension, dataflow_id) {
+extract_datastructure_dimension <- function(dimension, concepts) {
   tibble::tibble(
     DimensionID = attr(dimension, "id"),
+    Name = concepts$Name[
+      concepts$ConceptID == attr(dimension$ConceptIdentity$Ref, "id")
+    ],
     CodelistID = attr(dimension$LocalRepresentation$Enumeration$Ref, "id"),
     Position = as.integer(attr(dimension, "position"))
+  )
+}
+
+extract_concept <- function(concept) {
+  tibble::tibble(
+    ConceptID = attr(concept, "id"),
+    Name = concept$Name[[1]]
   )
 }
