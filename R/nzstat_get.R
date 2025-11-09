@@ -77,7 +77,7 @@ nzstat_get <- function(
   if (is.null(the$dataflows)) {
     the$dataflows <- get_dataflows(
       max_tries = 10L,
-      base_url = get_base_url(),
+      base_url = base_url,
       api_key = api_key
     )
   }
