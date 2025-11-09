@@ -5,9 +5,10 @@
 #' @param dataflow_id String. The DataflowID of a dataflow in the API.
 #' @param dimensions Named list specifying codes to include for each dimension
 #'     of the dataset. Each element should be a character string listing the
-#'     codes to include for the correspondinbg dimension. All codes will be
+#'     codes to include for the corresponding dimension. All codes will be
 #'     included for omitted dimensions, so only those dimensions you wish to
-#'     subset need be listed.
+#'     subset need be listed. Each name should correspond to one of the elements
+#'     in the `Name` column of `nzstat_get_datastructure(dataflow_id)`.
 #' @param max_tries Integer; maximum retry attempts. Passed to
 #'     [httr2::req_retry()].
 #' @param base_url The base URL to the API. If not set, uses the
@@ -27,6 +28,7 @@ nzstat_get <- function(
   dataflow_id,
   dimensions = list(),
   max_tries = 10L,
+  cache = TRUE,
   base_url = get_base_url(),
   api_key = get_api_key()
 ) {
@@ -72,18 +74,32 @@ nzstat_get <- function(
   }
 
   # Get dataflows and datastructure ----
-  dataflows <- get_dataflows(max_tries, base_url, api_key)
-  if (!(dataflow_id %in% dataflows$DataflowID)) {
+  if (is.null(the$dataflows)) {
+    the$dataflows <- get_dataflows(
+      max_tries = 10L,
+      base_url = get_base_url(),
+      api_key = api_key
+    )
+  }
+  if (!(dataflow_id %in% the$dataflows$DataflowID)) {
     cli::cli_abort(c(
       "{.var dataflow_id}={.val {dataflow_id}} not found",
       i = "Please check {.fn nzstat_get_dataflows} to select an available dataflow"
     ))
   }
-  dataflow <- dataflows[dataflows$DataflowID == dataflow_id, ]
-  datastructure <- get_datastructures(dataflow, max_tries, base_url, api_key)
-  if (!all(names(dimensions) %in% datastructure$DimensionID)) {
+  dataflow <- the$dataflows[the$dataflows$DataflowID == dataflow_id, ]
+
+  if (is.null(the$datastructures[[dataflow_id]])) {
+    the$datastructures[[dataflow_id]] <- get_datastructures(
+      dataflow,
+      max_tries,
+      base_url,
+      api_key
+    )
+  }
+  if (!all(names(dimensions) %in% the$datastructures[[dataflow_id]]$Name)) {
     wrong_ids <- names(dimensions)[
-      !(names(dimensions) %in% datastructure$DimensionID)
+      !(names(dimensions) %in% the$datastructures[[dataflow_id]]$Name)
     ]
     cli::cli_abort(c(
       "Unknown {.var dimensions} {.val {wrong_ids}}",
@@ -101,7 +117,7 @@ nzstat_get <- function(
   if (length(dimensions) == 0) {
     key <- "ALL"
   } else {
-    key <- purrr::map(datastructure$DimensionID, \(dim) {
+    key <- purrr::map(the$datastructures[[dataflow_id]]$Name, \(dim) {
       paste(dimensions[[dim]] %||% "", collapse = "+")
     }) |>
       paste(collapse = ".")
@@ -116,8 +132,14 @@ nzstat_get <- function(
       "user-agent" = make_user_agent()
     ) |>
     httr2::req_url_path_append("data", flowref, key) |>
-    httr2::req_url_query(format = "csvfilewithlabels") |>
-    httr2::req_retry(max_tries)
+    httr2::req_url_query(format = "csvfilewithlabels")
+  if (max_tries > 1) {
+    req <- req |>
+      httr2::req_retry(max_tries)
+  }
+  if (cache) {
+    req <- req |> httr2::req_cache(tempdir())
+  }
 
   # Perform request ----
   resp <- req |> httr2::req_perform()
