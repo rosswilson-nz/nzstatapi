@@ -14,7 +14,7 @@ nzstat_get_dataflows(
 \arguments{
 \item{search}{Optional search string. A regex pattern passed to \code{\link[=grepl]{grepl()}}.}
 
-\item{max_tries}{Integer; maximum retry attempts. Passed to
+\item{max_tries}{\code{FALSE}, or integer giving maximum retry attempts. Passed to
 \code{\link[httr2:req_retry]{httr2::req_retry()}}.}
 
 \item{base_url}{The base URL to the API. If not set, uses the
