@@ -50,17 +50,30 @@ nzstat_get_datastructure <- function(
   }
 
   # Get dataflows ----
-  dataflows <- get_dataflows(max_tries, base_url, api_key)
-  if (!(dataflow_id %in% dataflows$DataflowID)) {
+  if (is.null(the$dataflows)) {
+    the$dataflows <- get_dataflows(
+      max_tries = 10L,
+      base_url = get_base_url(),
+      api_key = api_key
+    )
+  }
+  if (!(dataflow_id %in% the$dataflows$DataflowID)) {
     cli::cli_abort(c(
       "{.var dataflow_id}={.val {dataflow_id}} not found",
       i = "Please check {.fn nzstat_get_dataflows} to select an available dataflow"
     ))
   }
-  dataflow <- as.list(dataflows[dataflows$DataflowID == dataflow_id, ])
-
+  dataflow <- as.list(the$dataflows[the$dataflows$DataflowID == dataflow_id, ])
   # Perform request ----
-  tbl <- get_datastructures(dataflow, max_tries, base_url, api_key)
+  if (is.null(the$datastructures[[dataflow_id]])) {
+    the$datastructures[[dataflow_id]] <- get_datastructures(
+      dataflow,
+      max_tries,
+      base_url,
+      api_key
+    )
+  }
+  tbl <- the$datastructures[[dataflow_id]]
 
   tbl[, c("DimensionID")]
 }
@@ -84,16 +97,18 @@ get_datastructures <- function(dataflow, max_tries, base_url, api_key) {
       "user-agent" = make_user_agent()
     ) |>
     httr2::req_url_path_append(ref) |>
-    httr2::req_url_query(references = "datastructure") |>
-    httr2::req_retry(max_tries) |>
-    httr2::req_cache(tempdir())
+    httr2::req_url_query(references = "datastructure")
+  if (max_tries > 1) {
+    req <- req |> httr2::req_retry(max_tries)
+  }
 
-  resp <- req |> httr2::req_perform()
-
-  resp_list <- resp |> httr2::resp_body_xml() |> xml2::as_list()
+  resp <- req |>
+    httr2::req_perform() |>
+    httr2::resp_body_xml() |>
+    xml2::as_list()
 
   dsd <- purrr::map(
-    resp_list$Structure$Structures$DataStructures[[
+    resp$Structure$Structures$DataStructures[[
       1
     ]]$DataStructureComponents$DimensionList,
     \(dimension) extract_datastructure_dimension(dimension, dataflow_id)

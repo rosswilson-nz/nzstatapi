@@ -61,17 +61,36 @@ nzstat_get_codelists <- function(
   }
 
   # Get dataflows & datastructures ----
-  dataflows <- get_dataflows(max_tries, base_url, api_key)
-  if (!(dataflow_id %in% dataflows$DataflowID)) {
+  if (is.null(the$dataflows)) {
+    the$dataflows <- get_dataflows(
+      max_tries = 10L,
+      base_url = get_base_url(),
+      api_key = api_key
+    )
+  }
+  if (!(dataflow_id %in% the$dataflows$DataflowID)) {
     cli::cli_abort(c(
       "{.var dataflow_id}={.val {dataflow_id}} not found",
       i = "Please check {.fn nzstat_get_dataflows} to select an available dataflow"
     ))
   }
-  dataflow <- as.list(dataflows[dataflows$DataflowID == dataflow_id, ])
-  datastructure <- get_datastructures(dataflow, max_tries, base_url, api_key)
-  if (!all(dimension_ids %in% datastructure$DimensionID)) {
-    wrong_ids <- dimension_ids[!(dimension_ids %in% datastructure$DimensionID)]
+  dataflow <- as.list(the$dataflows[the$dataflows$DataflowID == dataflow_id, ])
+
+  if (is.null(the$datastructures[[dataflow_id]])) {
+    the$datastructures[[dataflow_id]] <- get_datastructures(
+      dataflow,
+      max_tries,
+      base_url,
+      api_key
+    )
+  }
+  if (
+    !(missing(dimension_ids) ||
+      all(dimension_ids %in% the$datastructures[[dataflow_id]]$DimensionID))
+  ) {
+    wrong_ids <- dimension_ids[
+      !(dimension_ids %in% the$datastructures[[dataflow_id]]$DimensionID)
+    ]
     cli::cli_abort(c(
       "Unknown {.var dimension_ids} {.val {wrong_ids}}",
       i = "Please check {.fn nzstat_get_datastructures} to confirm available dimensions"
@@ -79,17 +98,26 @@ nzstat_get_codelists <- function(
   }
 
   # Perform request ----
-  codelists <- get_codelists(dataflow_id, max_tries, base_url, api_key)
+  if (is.null(the$codelists[[dataflow_id]])) {
+    the$codelists[[dataflow_id]] <- get_codelists(
+      dataflow_id,
+      max_tries,
+      base_url,
+      api_key
+    )
+  }
 
   if (missing(dimension_ids)) {
-    dimension_ids <- datastructure$DimensionID
+    dimension_ids <- the$datastructures[[dataflow_id]]$DimensionID
   }
-  codelist_ids <- datastructure[
-    datastructure$DimensionID %in% dimension_ids,
+  codelist_ids <- the$datastructures[[dataflow_id]][
+    the$datastructures[[dataflow_id]]$DimensionID %in% dimension_ids,
   ]$CodelistID
 
   purrr::map2(dimension_ids, codelist_ids, \(dim, cl) {
-    out <- codelists[codelists$CodelistID %in% cl, ]
+    out <- the$codelists[[dataflow_id]][
+      the$codelists[[dataflow_id]]$CodelistID %in% cl,
+    ]
     out$DimensionID <- dim
     out[, c("DimensionID", "CodeID", "Name")]
   }) |>
@@ -116,15 +144,19 @@ get_codelists <- function(dataflow_id, max_tries, base_url, api_key) {
       "user-agent" = make_user_agent()
     ) |>
     httr2::req_url_path_append(ref) |>
-    httr2::req_url_query(references = "codelist") |>
-    httr2::req_retry(max_tries)
+    httr2::req_url_query(references = "codelist")
 
-  resp <- req |> httr2::req_perform()
+  if (max_tries > 1) {
+    req <- req |> httr2::req_retry(max_tries)
+  }
 
-  resp_list <- resp |> httr2::resp_body_xml() |> xml2::as_list()
+  resp <- req |>
+    httr2::req_perform() |>
+    httr2::resp_body_xml() |>
+    xml2::as_list()
 
   purrr::map(
-    resp_list$Structure$Structures$Codelists,
+    resp$Structure$Structures$Codelists,
     \(codelist) extract_codes(codelist, dataflow_id)
   ) |>
     purrr::list_rbind()
