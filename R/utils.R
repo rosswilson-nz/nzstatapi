@@ -43,7 +43,10 @@ make_user_agent <- function() {
   )
 }
 
-refresh_metadata <- function() {
+#' Refresh metadata
+#'
+#' @export
+nzstat_refresh_metadata <- function() {
   the$dataflows <- NULL
   the$datastructures <- NULL
   the$codelists <- NULL
