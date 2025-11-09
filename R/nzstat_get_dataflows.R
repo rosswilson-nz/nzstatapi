@@ -76,7 +76,7 @@ get_dataflows <- function(max_tries, base_url, api_key) {
     ) |>
     httr2::req_url_path_append(ref) |>
     httr2::req_url_query(detail = "full")
-  if (max_tries > 0) {
+  if (max_tries > 1) {
     req <- req |> httr2::req_retry(max_tries)
   }
 
