@@ -42,3 +42,9 @@ make_user_agent <- function() {
     "nzstatapi/{packageVersion(\"nzstatapi\")} (Language=R/{package_version(R.version)})"
   )
 }
+
+refresh_metadata <- function() {
+  the$dataflows <- NULL
+  the$datastructures <- NULL
+  the$codelists <- NULL
+}
