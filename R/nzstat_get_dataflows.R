@@ -50,6 +50,14 @@ nzstat_get_dataflows <- function(
   }
 
   # Perform request ----
+  if (is.null(the$categories)) {
+    the$categories <- get_categories(
+      max_tries = 10L,
+      base_url = base_url,
+      api_key = api_key
+    )
+  }
+
   if (is.null(the$dataflows)) {
     the$dataflows <- get_dataflows(
       max_tries = 10L,
@@ -100,5 +108,69 @@ extract_dataflow_catalogue <- function(dataflow) {
     DataflowID = attr(dataflow, "id"),
     AgencyID = attr(dataflow, "agencyID"),
     Version = attr(dataflow, "version"),
+  )
+}
+
+get_categories <- function(max_tries, base_url, api_key) {
+  ref <- c("categoryscheme", "STATSNZ", "all")
+  req <- httr2::request(base_url) |>
+    httr2::req_headers_redacted("Ocp-Apim-Subscription-Key" = api_key) |>
+    httr2::req_headers(
+      "user-agent" = make_user_agent()
+    ) |>
+    httr2::req_url_path_append(ref) |>
+    httr2::req_url_query(references = "categorisation", detail = "full")
+  if (max_tries > 1) {
+    req <- req |> httr2::req_retry(max_tries)
+  }
+
+  # Perform request ----
+  resp <- req |>
+    httr2::req_perform() |>
+    httr2::resp_body_xml() |>
+    xml2::as_list()
+
+  categorisations <- purrr::map(
+    resp$Structure$Structures$Categorisations,
+    \(categorisation) extract_categorisation(categorisation)
+  ) |>
+    purrr::list_rbind()
+
+  purrr::map(resp$Structure$Structures$CategorySchemes, \(scheme) {
+    extract_category_scheme(scheme, categorisations)
+  }) |>
+    purrr::list_rbind()
+}
+
+extract_category_scheme <- function(scheme, categorisations) {
+  id <- attr(scheme, "id")
+  name <- scheme$Name[[1]]
+  categories <- scheme[names(scheme) == "Category"] |>
+    purrr::map(\(category) {
+      extract_category(category, id, name, categorisations)
+    }) |>
+    purrr::list_rbind()
+}
+
+extract_category <- function(category, id, name, categorisations) {
+  tibble::tibble(
+    SchemeID = id,
+    Topic = name,
+    CategoryID = attr(category, "id"),
+    Category = category$Name[[1]],
+    DataflowID = categorisations$DataflowID[
+      categorisations$SchemeID == SchemeID &
+        categorisations$CategoryID == CategoryID
+    ]
+  )
+}
+
+extract_categorisation <- function(categorisation) {
+  tibble::tibble(
+    CategorisationID = attr(categorisation, "id"),
+    Categorisation = categorisation$Name[[1]],
+    SchemeID = attr(categorisation$Target$Ref, "maintainableParentID"),
+    CategoryID = strsplit(attr(categorisation$Target$Ref, "id"), "\\.")[[1]],
+    DataflowID = attr(categorisation$Source$Ref, "id"),
   )
 }
