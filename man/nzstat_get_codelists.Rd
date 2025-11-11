@@ -6,7 +6,7 @@
 \usage{
 nzstat_get_codelists(
   dataflow_id,
-  dimension_ids,
+  dimensions,
   max_tries = 10L,
   base_url = get_base_url(),
   api_key = get_api_key()
@@ -15,8 +15,9 @@ nzstat_get_codelists(
 \arguments{
 \item{dataflow_id}{String. The DataflowID of a dataflow in the API.}
 
-\item{dimension_ids}{Character vector. Dimensions for which to retrieve
-codelists.}
+\item{dimensions}{Character vector. Dimensions for which to retrieve
+codelists. Should correspond to elements in the \code{Name} column of
+\code{nzstat_get_datastructure(dataflow_id)}.}
 
 \item{max_tries}{Integer; maximum retry attempts. Passed to
 \code{\link[httr2:req_retry]{httr2::req_retry()}}.}

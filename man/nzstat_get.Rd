@@ -7,7 +7,10 @@
 nzstat_get(
   dataflow_id,
   dimensions = list(),
+  keep = "factor",
+  keep_status = FALSE,
   max_tries = 10L,
+  cache = TRUE,
   base_url = get_base_url(),
   api_key = get_api_key()
 )
@@ -17,9 +20,17 @@ nzstat_get(
 
 \item{dimensions}{Named list specifying codes to include for each dimension
 of the dataset. Each element should be a character string listing the
-codes to include for the correspondinbg dimension. All codes will be
+codes to include for the corresponding dimension. All codes will be
 included for omitted dimensions, so only those dimensions you wish to
-subset need be listed.}
+subset need be listed. Each name should correspond to one of the elements
+in the \code{Name} column of \code{nzstat_get_datastructure(dataflow_id)}.}
+
+\item{keep}{String. Whether to keep dimension \"codes\", \"labels\", or
+\"both\"; or \"factor\" to convert the labels to a factor variable. The
+default is \"factor\".}
+
+\item{keep_status}{Boolean. Whether to keep the Status column in the returned
+dataset. The default is \code{FALSE}, as this is flag is rarely set.}
 
 \item{max_tries}{Integer; maximum retry attempts. Passed to
 \code{\link[httr2:req_retry]{httr2::req_retry()}}.}

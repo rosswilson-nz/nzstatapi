@@ -26,8 +26,10 @@ will look in environment variable \code{"NZSTAT_API_KEY"}, and throw an error
 if that is not found.}
 }
 \value{
-A tibble, with columns \code{Name}: the name/description of the dataflow;
-and \code{DataflowID}: the ID used to identify the dataflow in requests.
+A tibble, with columns \code{Topic}: the broad topic area; \code{Category} the
+sub-topic into which the dataflow is categorised; \code{Name}: the
+name/description of the dataflow; and \code{DataflowID}: the ID used to
+identify the dataflow in requests.
 }
 \description{
 Retrieves, formats, and optionally filters all available dataflow definitions

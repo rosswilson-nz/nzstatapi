@@ -9,6 +9,11 @@
 #'     included for omitted dimensions, so only those dimensions you wish to
 #'     subset need be listed. Each name should correspond to one of the elements
 #'     in the `Name` column of `nzstat_get_datastructure(dataflow_id)`.
+#' @param keep String. Whether to keep dimension \"codes\", \"labels\", or
+#'     \"both\"; or \"factor\" to convert the labels to a factor variable. The
+#'     default is \"factor\".
+#' @param keep_status Boolean. Whether to keep the Status column in the returned
+#'     dataset. The default is `FALSE`, as this is flag is rarely set.
 #' @param max_tries Integer; maximum retry attempts. Passed to
 #'     [httr2::req_retry()].
 #' @param base_url The base URL to the API. If not set, uses the
@@ -27,6 +32,8 @@
 nzstat_get <- function(
   dataflow_id,
   dimensions = list(),
+  keep = "factor",
+  keep_status = FALSE,
   max_tries = 10L,
   cache = TRUE,
   base_url = get_base_url(),
@@ -52,6 +59,28 @@ nzstat_get <- function(
     cli::cli_abort(c(
       "Each element of {.var dimensions} must be a character vector",
       x = "Element {.val {wrong_dimensions[[1]]}} is {.type {dimensions[[wrong_dimensions[[1]]]]}}"
+    ))
+  }
+  if (!rlang::is_string(keep)) {
+    cli::cli_abort(c(
+      "{.var keep} must be a string",
+      x = "You've supplied {.type {keep}}"
+    ))
+  }
+  if (!(keep %in% c("codes", "labels", "both", "factor"))) {
+    keep_values <- cli::cli_vec(
+      c("codes", "labels", "both"),
+      list("vec-last" = ", or ")
+    )
+    cli::cli_abort(c(
+      "{.var keep} must be {.val {keep_values}}",
+      x = "You've supplied {.val {keep}}"
+    ))
+  }
+  if (!rlang:::is_bool(keep_status)) {
+    cli::cli_abort(c(
+      "{.var keep_status} must be a logical scalar",
+      x = "You've supplied {.type {keep_status}}"
     ))
   }
   if (!rlang::is_bare_integerish(max_tries, 1)) {
@@ -103,11 +132,35 @@ nzstat_get <- function(
     ))
   }
 
+  if (is.null(the$codelists[[dataflow_id]])) {
+    the$codelists[[dataflow_id]] <- get_codelists(
+      dataflow,
+      max_tries,
+      base_url,
+      api_key
+    )
+  }
+  for (d in seq_along(dimensions)) {
+    dim <- names(dimensions)[[d]]
+    codes <- dimensions[[d]]
+    valid_codes <- the$codelists[[dataflow_id]][
+      the$codelists[[dataflow_id]]$CodelistID ==
+        the$datastructures[[dataflow_id]]$CodelistID[[d]],
+    ]$CodeID
+    if (!all(codes %in% valid_codes)) {
+      wrong_codes <- codes[!(codes %in% valid_codes)]
+      cli::cli_abort(c(
+        "Unknown codes for dimension {.val {dim}}",
+        x = "{.val {wrong_codes}} {?is/are} not valid"
+      ))
+    }
+  }
+
   # Construct request ----
   flowref <- paste(
-    dataflow$AgencyID,
-    dataflow$DataflowID,
-    dataflow$Version,
+    dataflow$AgencyID[[1]],
+    dataflow$DataflowID[[1]],
+    dataflow$Version[[1]],
     sep = ","
   )
   if (length(dimensions) == 0) {
@@ -140,7 +193,36 @@ nzstat_get <- function(
   # Perform request ----
   resp <- req |> httr2::req_perform()
 
-  httr2::resp_body_string(resp) |>
+  tbl <- httr2::resp_body_string(resp) |>
     I() |>
     readr::read_csv(show_col_types = FALSE)
+  tbl$Value <- tbl$OBS_VALUE
+  tbl$Status <- tbl$OBS_STATUS
+
+  variables <- switch(
+    keep,
+    codes = the$datastructures[[dataflow_id]]$DimensionID,
+    factor = ,
+    labels = the$datastructures[[dataflow_id]]$Name,
+    both = c(
+      the$datastructures[[dataflow_id]]$DimensionID,
+      the$datastructures[[dataflow_id]]$Name
+    ),
+  )
+  if (keep == "factor") {
+    for (i in seq_len(nrow(the$datastructures[[dataflow_id]]))) {
+      tbl[[the$datastructures[[dataflow_id]]$Name[[i]]]] <- factor(
+        tbl[[the$datastructures[[dataflow_id]]$DimensionID[[i]]]],
+        levels = the$codelists[[dataflow_id]][
+          the$codelists[[dataflow_id]]$CodelistID ==
+            the$datastructures[[dataflow_id]]$CodelistID[[i]],
+        ]$CodeID,
+        labels = the$codelists[[dataflow_id]][
+          the$codelists[[dataflow_id]]$CodelistID ==
+            the$datastructures[[dataflow_id]]$CodelistID[[i]],
+        ]$Name
+      )
+    }
+  }
+  tbl[intersect(names(tbl), c(variables, "Value", if (keep_status) "Status"))]
 }

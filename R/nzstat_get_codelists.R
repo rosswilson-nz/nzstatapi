@@ -124,9 +124,9 @@ nzstat_get_codelists <- function(
 get_codelists <- function(dataflow, max_tries, base_url, api_key) {
   ref <- c(
     "dataflow",
-    dataflow$AgencyID,
-    dataflow$DataflowID,
-    dataflow$Version,
+    dataflow$AgencyID[[1]],
+    dataflow$DataflowID[[1]],
+    dataflow$Version[[1]],
     "all"
   )
 
