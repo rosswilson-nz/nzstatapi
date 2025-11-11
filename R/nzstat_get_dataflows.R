@@ -13,8 +13,10 @@
 #'     will look in environment variable `"NZSTAT_API_KEY"`, and throw an error
 #'     if that is not found.
 #'
-#' @returns A tibble, with columns `Name`: the name/description of the dataflow;
-#'     and `DataflowID`: the ID used to identify the dataflow in requests.
+#' @returns A tibble, with columns `Topic`: the broad topic area; `Category` the
+#'     sub-topic into which the dataflow is categorised; `Name`: the
+#'     name/description of the dataflow; and `DataflowID`: the ID used to
+#'     identify the dataflow in requests.
 #'
 #' @export
 nzstat_get_dataflows <- function(
@@ -50,31 +52,35 @@ nzstat_get_dataflows <- function(
   }
 
   # Perform request ----
-  if (is.null(the$categories)) {
-    the$categories <- get_categories(
-      max_tries = 10L,
-      base_url = base_url,
-      api_key = api_key
-    )
-  }
-
   if (is.null(the$dataflows)) {
-    the$dataflows <- get_dataflows(
-      max_tries = 10L,
-      base_url = base_url,
-      api_key = api_key
-    )
+    the$dataflows <- get_dataflows(max_tries, base_url, api_key)
   }
   tbl <- the$dataflows
 
   if (!is.null(search)) {
-    tbl <- tbl[grepl(search, tbl$Name, ignore.case = TRUE), ]
+    tbl <- tbl[
+      grepl(search, tbl$Name, ignore.case = TRUE) |
+        grepl(search, tbl$Topic, ignore.case = TRUE) |
+        grepl(search, tbl$Category, ignore.case = TRUE),
+    ]
   }
 
-  tbl[, c("Name", "DataflowID")]
+  tbl[, c("Topic", "Category", "Name", "DataflowID")]
 }
 
 get_dataflows <- function(max_tries, base_url, api_key) {
+  categories <- get_categories(max_tries, base_url, api_key)
+  dataflows <- get_dataflow_catalog(max_tries, base_url, api_key)
+  dataflow_names <- tibble::deframe(dataflows[, c("DataflowID", "Name")])
+  dataflow_agency <- tibble::deframe(dataflows[, c("DataflowID", "AgencyID")])
+  dataflow_version <- tibble::deframe(dataflows[, c("DataflowID", "Version")])
+  categories$Name <- dataflow_names[categories$DataflowID]
+  categories$AgencyID <- dataflow_agency[categories$DataflowID]
+  categories$Version <- dataflow_version[categories$DataflowID]
+  categories
+}
+
+get_dataflow_catalog <- function(max_tries, base_url, api_key) {
   # Construct request ----
   ref <- c("dataflow", "STATSNZ", "all")
   req <- httr2::request(base_url) |>

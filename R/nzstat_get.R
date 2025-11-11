@@ -75,11 +75,7 @@ nzstat_get <- function(
 
   # Get dataflows and datastructure ----
   if (is.null(the$dataflows)) {
-    the$dataflows <- get_dataflows(
-      max_tries = 10L,
-      base_url = base_url,
-      api_key = api_key
-    )
+    the$dataflows <- get_dataflows(max_tries, base_url, api_key)
   }
   if (!(dataflow_id %in% the$dataflows$DataflowID)) {
     cli::cli_abort(c(
